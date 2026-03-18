@@ -1,0 +1,194 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Protocol": {
+      "title": "Protocol",
+      "description": "A document protocol record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "sender": { "type": "string" },
+        "receiver": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "in_transit", "delivered", "returned"] },
+        "type": { "type": "string", "enum": ["internal", "external"] },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "signature": { "type": "string", "description": "Base64 signature image" },
+        "photo": { "type": "string", "description": "Base64 photo image" },
+        "qrCode": { "type": "string" }
+      },
+      "required": ["title", "status", "type", "createdBy"]
+    },
+    "History": {
+      "title": "History",
+      "description": "Tracking history for a protocol",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "protocolId": { "type": "string" },
+        "action": { "type": "string" },
+        "description": { "type": "string" },
+        "performedBy": { "type": "string" },
+        "performedByName": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["protocolId", "action", "performedBy", "timestamp"]
+    },
+    "Company": {
+      "title": "Company",
+      "description": "Company information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Employee information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "departmentId": { "type": "string" },
+        "companyId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "Department": {
+      "title": "Department",
+      "description": "Department information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "companyId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "ProtocolItem": {
+      "title": "ProtocolItem",
+      "description": "Item included in a protocol",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "protocolId": { "type": "string" },
+        "name": { "type": "string" },
+        "quantity": { "type": "number" },
+        "description": { "type": "string" },
+        "ref": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "value": { "type": "number" },
+        "total": { "type": "number" },
+        "returnDate": { "type": "string" },
+        "returned": { "type": "boolean" },
+        "returnedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["protocolId", "name", "quantity"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "read": { "type": "boolean" },
+        "type": { "type": "string", "enum": ["protocol", "credential", "dispatch"] },
+        "link": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "read", "type"]
+    },
+    "ProtocolClassification": {
+      "title": "ProtocolClassification",
+      "description": "Classification for protocols",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "code"]
+    },
+    "ProtocolDocumentType": {
+      "title": "ProtocolDocumentType",
+      "description": "Document type for protocols",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/protocols/{protocolId}": {
+      "schema": "Protocol",
+      "description": "Protocol records"
+    },
+    "/protocols/{protocolId}/history/{historyId}": {
+      "schema": "History",
+      "description": "Protocol tracking history"
+    },
+    "/protocols/{protocolId}/items/{itemId}": {
+      "schema": "ProtocolItem",
+      "description": "Items in a protocol"
+    },
+    "/companies/{companyId}": {
+      "schema": "Company",
+      "description": "Companies"
+    },
+    "/employees/{employeeId}": {
+      "schema": "Employee",
+      "description": "Employees"
+    },
+    "/departments/{departmentId}": {
+      "schema": "Department",
+      "description": "Departments"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    },
+    "/classifications/{classificationId}": {
+      "schema": "ProtocolClassification",
+      "description": "Protocol classifications"
+    },
+    "/documentTypes/{docTypeId}": {
+      "schema": "ProtocolDocumentType",
+      "description": "Protocol document types"
+    }
+  }
+}

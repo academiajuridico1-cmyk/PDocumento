@@ -1,0 +1,189 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - role: string (required, enum: ['admin', 'user'])
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: protocols
+    // Document ID: protocolId
+    // Fields:
+    //   - title: string (required)
+    //   - description: string (optional)
+    //   - sender: string (optional)
+    //   - receiver: string (optional)
+    //   - status: string (required, enum: ['pending', 'in_transit', 'delivered', 'returned'])
+    //   - type: string (required, enum: ['internal', 'external'])
+    //   - createdBy: string (required, UID)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //   - signature: string (optional, base64)
+    //   - photo: string (optional, base64)
+    //
+    // Collection: protocols/{protocolId}/history
+    // Document ID: historyId
+    // Fields:
+    //   - protocolId: string (required)
+    //   - action: string (required)
+    //   - description: string (optional)
+    //   - performedBy: string (required, UID)
+    //   - performedByName: string (optional)
+    //   - timestamp: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+         (request.auth.token.email == "bobilonem@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['admin', 'user'];
+    }
+
+    function isValidProtocol(data) {
+      return data.keys().hasAll(['title', 'status', 'type', 'createdBy', 'createdAt', 'updatedAt']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.status in ['pending', 'in_transit', 'delivered', 'returned'] &&
+             data.type in ['internal', 'external'] &&
+             data.createdBy is string &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidHistory(data) {
+      return data.keys().hasAll(['protocolId', 'action', 'performedBy', 'timestamp']) &&
+             data.protocolId is string &&
+             data.action is string &&
+             data.performedBy is string &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidCompany(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() < 100;
+    }
+
+    function isValidEmployee(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() < 100;
+    }
+
+    function isValidDepartment(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() < 100;
+    }
+
+    function isValidProtocolItem(data) {
+      return data.keys().hasAll(['protocolId', 'name', 'quantity']) &&
+             data.protocolId is string &&
+             data.name is string &&
+             data.quantity is number;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['userId', 'title', 'message', 'read', 'type']) &&
+             data.userId is string &&
+             data.title is string &&
+             data.message is string &&
+             data.read is bool &&
+             data.type in ['protocol', 'credential', 'dispatch'];
+    }
+
+    function isValidClassification(data) {
+      return data.keys().hasAll(['name', 'code']) &&
+             data.name is string &&
+             data.code is string;
+    }
+
+    function isValidDocumentType(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /protocols/{protocolId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidProtocol(request.resource.data) && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isAuthenticated() && isValidProtocol(request.resource.data);
+      allow delete: if isAdmin();
+
+      match /history/{historyId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isValidHistory(request.resource.data) && request.resource.data.performedBy == request.auth.uid;
+      }
+    }
+
+    match /{path=**}/items/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidProtocolItem(request.resource.data);
+    }
+
+    match /companies/{companyId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidCompany(request.resource.data);
+    }
+
+    match /employees/{employeeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidEmployee(request.resource.data);
+    }
+
+    match /departments/{departmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidDepartment(request.resource.data);
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidNotification(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
+    match /classifications/{classificationId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidClassification(request.resource.data);
+    }
+
+    match /documentTypes/{docTypeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isValidDocumentType(request.resource.data);
+    }
+  }
+}

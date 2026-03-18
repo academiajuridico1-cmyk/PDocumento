@@ -1,0 +1,5 @@
+{
+  "name": "Pdocumento",
+  "description": "Sistema avançado de protocolo online para gestão de documentos, assinaturas digitais e rastreamento em tempo real.",
+  "requestFramePermissions": ["camera"]
+}
