@@ -37,6 +37,7 @@ import {
   AlertCircle,
   Building2,
   PlusCircle,
+  Printer,
   Users,
   Layers,
   ListChecks,
@@ -257,6 +258,55 @@ const CameraEscHandler = ({ onClose }: { onClose: () => void }) => {
   return null;
 };
 
+const ConfirmModal = ({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  title, 
+  message, 
+  confirmText = "Excluir", 
+  cancelText = "Cancelar",
+  isDanger = true 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: () => void; 
+  title: string; 
+  message: string; 
+  confirmText?: string; 
+  cancelText?: string;
+  isDanger?: boolean;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <Modal onClose={onClose} title={title}>
+      <div className="space-y-6">
+        <p className="text-stone-600 leading-relaxed">{message}</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={onClose}
+            className="flex-1 px-4 py-3 rounded-xl border border-stone-200 font-bold text-stone-600 hover:bg-stone-50 transition-all"
+          >
+            {cancelText}
+          </button>
+          <button 
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className={`flex-1 px-4 py-3 rounded-xl font-bold text-white transition-all ${
+              isDanger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-stone-900 hover:bg-stone-800'
+            }`}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -353,6 +403,21 @@ export default function App() {
   const [editType, setEditType] = useState<'protocol' | 'company' | 'employee' | 'department' | 'classification' | 'documentType' | 'item' | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // Confirmation Modal states
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    isDanger?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
   const [newCompany, setNewCompany] = useState({ name: '', code: '', email: '', phone: '', address: '' });
   const [newEmployee, setNewEmployee] = useState({ name: '', email: '', departmentId: '', companyId: '' });
   const [newDepartment, setNewDepartment] = useState({ name: '', code: '', companyId: '' });
@@ -420,6 +485,20 @@ export default function App() {
     }
   }, [user, isAuthReady]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const protocolId = params.get('protocolId');
+    if (protocolId && user && protocols.length > 0) {
+      const protocol = protocols.find(p => p.id === protocolId);
+      if (protocol) {
+        setSelectedProtocol(protocol);
+        setView('protocol-detail');
+        // Clear the URL parameter to avoid re-selecting on refresh
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [user, protocols]);
+
   const handleLogin = async () => {
     try {
       const provider = new GoogleAuthProvider();
@@ -431,50 +510,85 @@ export default function App() {
 
   const handleLogout = () => signOut(auth);
 
-  const handleDeleteProtocol = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este protocolo? Esta ação não pode ser desfeita.')) {
-      await ProtocolService.deleteProtocol(id);
-      if (selectedProtocol?.id === id) {
-        setSelectedProtocol(null);
-        setView('dashboard');
+  const handleDeleteProtocol = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Protocolo',
+      message: 'Tem certeza que deseja excluir este protocolo? Esta ação não pode ser desfeita.',
+      onConfirm: async () => {
+        await ProtocolService.deleteProtocol(id);
+        if (selectedProtocol?.id === id) {
+          setSelectedProtocol(null);
+          setView('dashboard');
+        }
       }
-    }
+    });
   };
 
-  const handleDeleteCompany = async (id: string) => {
-    if (window.confirm('Excluir esta empresa?')) {
-      await ProtocolService.deleteCompany(id);
-    }
+  const handleDeleteCompany = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Empresa',
+      message: 'Tem certeza que deseja excluir esta empresa?',
+      onConfirm: async () => {
+        await ProtocolService.deleteCompany(id);
+      }
+    });
   };
 
-  const handleDeleteEmployee = async (id: string) => {
-    if (window.confirm('Excluir este funcionário?')) {
-      await ProtocolService.deleteEmployee(id);
-    }
+  const handleDeleteEmployee = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Funcionário',
+      message: 'Tem certeza que deseja excluir este funcionário?',
+      onConfirm: async () => {
+        await ProtocolService.deleteEmployee(id);
+      }
+    });
   };
 
-  const handleDeleteDepartment = async (id: string) => {
-    if (window.confirm('Excluir este departamento?')) {
-      await ProtocolService.deleteDepartment(id);
-    }
+  const handleDeleteDepartment = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Departamento',
+      message: 'Tem certeza que deseja excluir este departamento?',
+      onConfirm: async () => {
+        await ProtocolService.deleteDepartment(id);
+      }
+    });
   };
 
-  const handleDeleteClassification = async (id: string) => {
-    if (window.confirm('Excluir esta classificação?')) {
-      await ProtocolService.deleteClassification(id);
-    }
+  const handleDeleteClassification = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Classificação',
+      message: 'Tem certeza que deseja excluir esta classificação?',
+      onConfirm: async () => {
+        await ProtocolService.deleteClassification(id);
+      }
+    });
   };
 
-  const handleDeleteDocumentType = async (id: string) => {
-    if (window.confirm('Excluir este tipo de documento?')) {
-      await ProtocolService.deleteDocumentType(id);
-    }
+  const handleDeleteDocumentType = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Tipo de Documento',
+      message: 'Tem certeza que deseja excluir este tipo de documento?',
+      onConfirm: async () => {
+        await ProtocolService.deleteDocumentType(id);
+      }
+    });
   };
 
-  const handleDeleteProtocolItem = async (protocolId: string, itemId: string) => {
-    if (window.confirm('Excluir este item do protocolo?')) {
-      await ProtocolService.deleteProtocolItem(protocolId, itemId);
-    }
+  const handleDeleteProtocolItem = (protocolId: string, itemId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Item do Protocolo',
+      message: 'Tem certeza que deseja excluir este item do protocolo?',
+      onConfirm: async () => {
+        await ProtocolService.deleteProtocolItem(protocolId, itemId);
+      }
+    });
   };
 
   const handleEdit = (item: any, type: typeof editType) => {
@@ -526,11 +640,13 @@ export default function App() {
       const classif = classifications.find(c => c.id === newProtocol.classificationId);
       const year = new Date().getFullYear();
       
-      const deptCode = dept?.code || dept?.name?.substring(0, 3).toUpperCase() || 'XXX';
-      const instCode = inst?.code || inst?.name?.substring(0, 3).toUpperCase() || 'XXX';
-      const classifCode = classif?.code || '000';
+      // Use names as requested if possible, or codes
+      const deptPart = dept?.name || 'DEP';
+      const instPart = inst?.name || 'INST';
+      const classifPart = classif?.code || classif?.name || '000';
       
-      const protoNum = `1/${deptCode}/${instCode}/${classifCode}/${year}`;
+      // Format: 1/departamento/instituição/número de classificador/2026
+      const protoNum = `1/${deptPart}/${instPart}/${classifPart}/${year}`;
       if (newProtocol.protocolNumber !== protoNum) {
         setNewProtocol(prev => ({ ...prev, protocolNumber: protoNum }));
       }
@@ -550,12 +666,22 @@ export default function App() {
 
     if (id) {
       // Save local items
+      const savedItems: ProtocolItem[] = [];
       for (const item of localItems) {
-        await ProtocolService.addProtocolItem({
+        const itemId = await ProtocolService.addProtocolItem({
           ...item,
           protocolId: id,
           returned: false
         });
+        if (itemId) {
+          savedItems.push({ ...item, id: itemId, protocolId: id, returned: false });
+        }
+      }
+
+      // Fetch the full protocol object to ensure we have the correct data (like createdAt)
+      const fullProtocol = await ProtocolService.getProtocol(id);
+      if (fullProtocol) {
+        handleGenerateReceipt(fullProtocol);
       }
 
       setNewProtocol({ 
@@ -806,7 +932,7 @@ export default function App() {
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
-    doc.text(`Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')} - Protocolo Digital MAX365`, pageWidth / 2, 285, { align: 'center' });
+    doc.text(`Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')} - Protocolo Digital`, pageWidth / 2, 285, { align: 'center' });
 
     doc.save(`recibo-protocolo-${protocol.id}.pdf`);
   };
@@ -891,7 +1017,7 @@ export default function App() {
     // Footer
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
-    doc.text(`Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')} - Sistema MAX365`, pageWidth / 2, 285, { align: 'center' });
+    doc.text(`Gerado em ${format(new Date(), 'dd/MM/yyyy HH:mm')} - Protocolo Digital`, pageWidth / 2, 285, { align: 'center' });
 
     doc.save(`comunicacao-despacho-${protocol.id}.pdf`);
   };
@@ -2228,6 +2354,13 @@ export default function App() {
                                 <span className="text-xs font-bold">Recibo</span>
                               </button>
                               <button 
+                                onClick={() => window.print()}
+                                className="flex flex-col items-center gap-2 p-4 bg-stone-50 text-stone-700 rounded-2xl border border-stone-200 hover:bg-stone-100 transition-all print:hidden"
+                              >
+                                <Printer size={24} />
+                                <span className="text-xs font-bold">Imprimir</span>
+                              </button>
+                              <button 
                                 onClick={() => {
                                   setNewItem({
                                     name: '',
@@ -2821,6 +2954,16 @@ export default function App() {
               </div>
             </Modal>
           )}
+
+          <ConfirmModal 
+            isOpen={confirmModal.isOpen}
+            onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            onConfirm={confirmModal.onConfirm}
+            title={confirmModal.title}
+            message={confirmModal.message}
+            confirmText={confirmModal.confirmText}
+            isDanger={confirmModal.isDanger}
+          />
         </AnimatePresence>
 
       </div>

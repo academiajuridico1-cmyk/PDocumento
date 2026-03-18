@@ -371,11 +371,11 @@ export const ProtocolService = {
       <p><strong>Departamento:</strong> ${deptName}</p>
     </div>
     <p>Por favor, acesse o sistema para acompanhar ou dar seguimento ao processo.</p>
-    <a href="${window.location.origin}?mode=login" class="button">📂 Ver Protocolo</a>
+    <a href="${window.location.origin}?protocolId=${docRef.id}" class="button">📂 Ver Protocolo</a>
     <p>Este é um aviso automático do sistema.</p>
   </div>
   <div class="footer">
-    Pdocumento • Sistema de Gestão de Documentos
+    Protocolo Digital • Sistema de Gestão de Documentos
   </div>
 </div>
 </body>
@@ -466,6 +466,16 @@ export const ProtocolService = {
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `protocols/${protocolId}/dispatch`);
+    }
+  },
+
+  async getProtocol(id: string): Promise<Protocol | null> {
+    try {
+      const docSnap = await getDoc(doc(db, 'protocols', id));
+      return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Protocol : null;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `protocols/${id}`);
+      return null;
     }
   },
 
@@ -636,13 +646,13 @@ export const ProtocolService = {
       <p><strong>Email:</strong> ${employee.email}</p>
       <p><strong>Senha Temporária:</strong> Pdoc@2026</p>
     </div>
-    <a href="${window.location.origin}" class="button">🔐 Acessar o Sistema</a>
+    <a href="${window.location.origin}?mode=login" class="button">🔐 Acessar o Sistema</a>
     <p class="alert">⚠️ Por segurança, altere sua senha no primeiro acesso.</p>
     <p>Se tiver dificuldades, entre em contacto com o administrador do sistema.</p>
     <p>Seja bem-vindo(a) e bom trabalho!</p>
   </div>
   <div class="footer">
-    Pdocumento • Sistema de Gestão de Documentos
+    Protocolo Digital • Sistema de Gestão de Documentos
   </div>
 </div>
 </body>
@@ -722,10 +732,11 @@ export const ProtocolService = {
   // Protocol Items
   async addProtocolItem(item: Omit<ProtocolItem, 'id'>) {
     try {
-      await addDoc(collection(db, 'protocols', item.protocolId, 'items'), {
+      const docRef = await addDoc(collection(db, 'protocols', item.protocolId, 'items'), {
         ...item,
         returned: false
       });
+      return docRef.id;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `protocols/${item.protocolId}/items`);
     }

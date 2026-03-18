@@ -11,7 +11,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
       {/* NAVBAR */}
       <nav className="flex justify-between items-center bg-[#0d47a1] px-8 py-4 text-white sticky top-0 z-50 shadow-md">
         <div className="flex items-center gap-2 font-bold text-xl">
-          <span className="text-2xl">📄</span> Pdocumento
+          <span className="text-2xl">📄</span> Protocolo Digital
         </div>
         <div className="flex items-center gap-6">
           <a href="#funcionalidade" className="hover:underline font-medium transition-all">Funcionalidade</a>
@@ -77,7 +77,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
       {/* FOOTER */}
       <footer className="bg-[#0d47a1] text-white text-center py-8">
         <p className="text-sm opacity-80">
-          © 2026 Pdocumento – Sistema de Protocolo de Documento
+          © 2026 Protocolo Digital – Sistema de Protocolo de Documento
         </p>
       </footer>
     </div>
