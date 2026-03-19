@@ -462,14 +462,14 @@ export default function App() {
   }, [user, isAuthReady]);
 
   useEffect(() => {
-    if (user && isAuthReady) {
-      const unsubProtocols = ProtocolService.subscribeToProtocols(setProtocols);
-      const unsubCompanies = ProtocolService.subscribeToCompanies(setCompanies);
-      const unsubEmployees = ProtocolService.subscribeToEmployees(setEmployees);
-      const unsubDepartments = ProtocolService.subscribeToDepartments(setDepartments);
-      const unsubClassifications = ProtocolService.subscribeToClassifications(setClassifications);
-      const unsubDocTypes = ProtocolService.subscribeToDocumentTypes(setDocumentTypes);
-      const unsubAllItems = ProtocolService.subscribeToAllItems(setAllItems);
+    if (user && isAuthReady && profile?.companyId) {
+      const unsubProtocols = ProtocolService.subscribeToProtocols(profile.companyId, setProtocols);
+      const unsubCompanies = ProtocolService.subscribeToCompanies(profile.companyId, setCompanies);
+      const unsubEmployees = ProtocolService.subscribeToEmployees(profile.companyId, setEmployees);
+      const unsubDepartments = ProtocolService.subscribeToDepartments(profile.companyId, setDepartments);
+      const unsubClassifications = ProtocolService.subscribeToClassifications(profile.companyId, setClassifications);
+      const unsubDocumentTypes = ProtocolService.subscribeToDocumentTypes(profile.companyId, setDocumentTypes);
+      const unsubAllItems = ProtocolService.subscribeToAllItems(profile.companyId, setAllItems);
       const unsubNotifications = ProtocolService.subscribeToNotifications(user.uid, setNotifications);
 
       return () => {
@@ -478,7 +478,7 @@ export default function App() {
         unsubEmployees();
         unsubDepartments();
         unsubClassifications();
-        unsubDocTypes();
+        unsubDocumentTypes();
         unsubAllItems();
         unsubNotifications();
       };
@@ -662,6 +662,7 @@ export default function App() {
       status: 'pending',
       createdBy: user.uid,
       createdByName: profile.displayName || user.email!,
+      companyId: profile.companyId
     });
 
     if (id) {
@@ -671,7 +672,8 @@ export default function App() {
         const itemId = await ProtocolService.addProtocolItem({
           ...item,
           protocolId: id,
-          returned: false
+          returned: false,
+          companyId: profile.companyId
         });
         if (itemId) {
           savedItems.push({ ...item, id: itemId, protocolId: id, returned: false });
@@ -742,45 +744,66 @@ export default function App() {
 
   const handleCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault();
-    await ProtocolService.createCompany(newCompany);
+    if (!profile?.companyId) return;
+    await ProtocolService.createCompany({
+      ...newCompany,
+      ownerCompanyId: profile.companyId
+    });
     setNewCompany({ name: '', email: '', phone: '', address: '' });
     setShowCompanyModal(false);
   };
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    await ProtocolService.createEmployee(newEmployee);
+    if (!profile?.companyId) return;
+    await ProtocolService.createEmployee({
+      ...newEmployee,
+      companyId: profile.companyId
+    });
     setNewEmployee({ name: '', email: '', departmentId: '', companyId: '' });
     setShowEmployeeModal(false);
   };
 
   const handleCreateDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
-    await ProtocolService.createDepartment(newDepartment);
+    if (!profile?.companyId) return;
+    await ProtocolService.createDepartment({
+      ...newDepartment,
+      companyId: profile.companyId
+    });
     setNewDepartment({ name: '', code: '', companyId: '' });
     setShowDepartmentModal(false);
   };
 
   const handleCreateClassification = async (e: React.FormEvent) => {
     e.preventDefault();
-    await ProtocolService.createClassification(newClassification);
+    if (!profile?.companyId) return;
+    await ProtocolService.createClassification({
+      ...newClassification,
+      companyId: profile.companyId
+    });
     setNewClassification({ name: '', code: '' });
     setShowClassificationModal(false);
   };
 
   const handleCreateDocType = async (e: React.FormEvent) => {
     e.preventDefault();
-    await ProtocolService.createDocumentType(newDocType);
+    if (!profile?.companyId) return;
+    await ProtocolService.createDocumentType({
+      ...newDocType,
+      companyId: profile.companyId
+    });
     setNewDocType({ name: '' });
     setShowDocTypeModal(false);
   };
 
   const handleAddItemToExistingProtocol = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProtocol) return;
+    if (!selectedProtocol || !profile?.companyId) return;
     await ProtocolService.addProtocolItem({
       ...newItem,
-      protocolId: selectedProtocol.id
+      protocolId: selectedProtocol.id,
+      companyId: profile.companyId
     });
     setNewItem({
       name: '',

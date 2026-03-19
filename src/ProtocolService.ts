@@ -267,14 +267,15 @@ export const ProtocolService = {
     }
   },
 
-  async createProtocol(protocol: Omit<Protocol, 'id' | 'createdAt' | 'updatedAt' | 'protocolNumber' | 'sequenceNumber'>) {
+  async createProtocol(protocol: Omit<Protocol, 'id' | 'createdAt' | 'updatedAt' | 'protocolNumber' | 'sequenceNumber'> & { companyId: string }) {
     const path = 'protocols';
     try {
-      // Calculate next sequence number for this department and document type
+      // Calculate next sequence number for this department and document type within the company
       let nextSequence = 1;
       if (protocol.originDepartmentId && protocol.documentTypeId) {
         const q = query(
           collection(db, 'protocols'),
+          where('companyId', '==', protocol.companyId),
           where('originDepartmentId', '==', protocol.originDepartmentId),
           where('documentTypeId', '==', protocol.documentTypeId),
           orderBy('sequenceNumber', 'desc'),
@@ -528,8 +529,12 @@ export const ProtocolService = {
     }
   },
 
-  subscribeToProtocols(callback: (protocols: Protocol[]) => void) {
-    const q = query(collection(db, 'protocols'), orderBy('createdAt', 'desc'));
+  subscribeToProtocols(companyId: string, callback: (protocols: Protocol[]) => void) {
+    const q = query(
+      collection(db, 'protocols'), 
+      where('companyId', '==', companyId),
+      orderBy('createdAt', 'desc')
+    );
     return onSnapshot(q, (snapshot) => {
       const protocols = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -555,7 +560,7 @@ export const ProtocolService = {
   },
 
   // Companies
-  async createCompany(company: Omit<Company, 'id' | 'createdAt'>) {
+  async createCompany(company: Omit<Company, 'id' | 'createdAt'> & { ownerCompanyId?: string }) {
     try {
       const docRef = await addDoc(collection(db, 'companies'), {
         ...company,
@@ -583,8 +588,12 @@ export const ProtocolService = {
     }
   },
 
-  subscribeToCompanies(callback: (companies: Company[]) => void) {
-    return onSnapshot(collection(db, 'companies'), (snapshot) => {
+  subscribeToCompanies(companyId: string, callback: (companies: Company[]) => void) {
+    // For now, we'll show all companies but we could filter by ownerId if we wanted to scope "other companies" added by this user
+    // However, the user wants "limpa sem conteúdo", so we should probably filter by ownerId or similar
+    // Let's add a 'companyId' field to companies too, representing the company that added this "other company"
+    const q = query(collection(db, 'companies'), where('ownerCompanyId', '==', companyId));
+    return onSnapshot(q, (snapshot) => {
       const companies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Company[];
       callback(companies);
     }, (error) => {
@@ -593,7 +602,7 @@ export const ProtocolService = {
   },
 
   // Employees
-  async createEmployee(employee: Omit<Employee, 'id' | 'createdAt'>) {
+  async createEmployee(employee: Omit<Employee, 'id' | 'createdAt'> & { companyId: string }) {
     try {
       const docRef = await addDoc(collection(db, 'employees'), {
         ...employee,
@@ -683,8 +692,9 @@ export const ProtocolService = {
     }
   },
 
-  subscribeToEmployees(callback: (employees: Employee[]) => void) {
-    return onSnapshot(collection(db, 'employees'), (snapshot) => {
+  subscribeToEmployees(companyId: string, callback: (employees: Employee[]) => void) {
+    const q = query(collection(db, 'employees'), where('companyId', '==', companyId));
+    return onSnapshot(q, (snapshot) => {
       const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Employee[];
       callback(employees);
     }, (error) => {
@@ -693,7 +703,7 @@ export const ProtocolService = {
   },
 
   // Departments
-  async createDepartment(department: Omit<Department, 'id' | 'createdAt'>) {
+  async createDepartment(department: Omit<Department, 'id' | 'createdAt'> & { companyId: string }) {
     try {
       await addDoc(collection(db, 'departments'), {
         ...department,
@@ -720,8 +730,9 @@ export const ProtocolService = {
     }
   },
 
-  subscribeToDepartments(callback: (departments: Department[]) => void) {
-    return onSnapshot(collection(db, 'departments'), (snapshot) => {
+  subscribeToDepartments(companyId: string, callback: (departments: Department[]) => void) {
+    const q = query(collection(db, 'departments'), where('companyId', '==', companyId));
+    return onSnapshot(q, (snapshot) => {
       const departments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Department[];
       callback(departments);
     }, (error) => {
@@ -730,7 +741,7 @@ export const ProtocolService = {
   },
 
   // Protocol Items
-  async addProtocolItem(item: Omit<ProtocolItem, 'id'>) {
+  async addProtocolItem(item: Omit<ProtocolItem, 'id'> & { companyId: string }) {
     try {
       const docRef = await addDoc(collection(db, 'protocols', item.protocolId, 'items'), {
         ...item,
@@ -780,7 +791,7 @@ export const ProtocolService = {
   },
 
   // Document Classifications
-  async createClassification(classification: Omit<ProtocolClassification, 'id' | 'createdAt'>) {
+  async createClassification(classification: Omit<ProtocolClassification, 'id' | 'createdAt'> & { companyId: string }) {
     try {
       await addDoc(collection(db, 'classifications'), {
         ...classification,
@@ -807,8 +818,9 @@ export const ProtocolService = {
     }
   },
 
-  subscribeToClassifications(callback: (classifications: ProtocolClassification[]) => void) {
-    return onSnapshot(collection(db, 'classifications'), (snapshot) => {
+  subscribeToClassifications(companyId: string, callback: (classifications: ProtocolClassification[]) => void) {
+    const q = query(collection(db, 'classifications'), where('companyId', '==', companyId));
+    return onSnapshot(q, (snapshot) => {
       const classifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ProtocolClassification[];
       callback(classifications);
     }, (error) => {
@@ -817,7 +829,7 @@ export const ProtocolService = {
   },
 
   // Document Types
-  async createDocumentType(docType: Omit<ProtocolDocumentType, 'id' | 'createdAt'>) {
+  async createDocumentType(docType: Omit<ProtocolDocumentType, 'id' | 'createdAt'> & { companyId: string }) {
     try {
       await addDoc(collection(db, 'documentTypes'), {
         ...docType,
@@ -844,8 +856,9 @@ export const ProtocolService = {
     }
   },
 
-  subscribeToDocumentTypes(callback: (docTypes: ProtocolDocumentType[]) => void) {
-    return onSnapshot(collection(db, 'documentTypes'), (snapshot) => {
+  subscribeToDocumentTypes(companyId: string, callback: (docTypes: ProtocolDocumentType[]) => void) {
+    const q = query(collection(db, 'documentTypes'), where('companyId', '==', companyId));
+    return onSnapshot(q, (snapshot) => {
       const docTypes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ProtocolDocumentType[];
       callback(docTypes);
     }, (error) => {
@@ -853,8 +866,9 @@ export const ProtocolService = {
     });
   },
 
-  subscribeToAllItems(callback: (items: ProtocolItem[]) => void) {
-    return onSnapshot(collectionGroup(db, 'items'), (snapshot) => {
+  subscribeToAllItems(companyId: string, callback: (items: ProtocolItem[]) => void) {
+    const q = query(collectionGroup(db, 'items'), where('companyId', '==', companyId));
+    return onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ProtocolItem[];
       callback(items);
     }, (error) => {

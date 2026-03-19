@@ -136,54 +136,63 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isOwner(userId) && isValidUser(request.resource.data);
       allow update: if (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+      allow delete: if isAdmin();
     }
 
     match /protocols/{protocolId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidProtocol(request.resource.data) && request.resource.data.createdBy == request.auth.uid;
       allow update: if isAuthenticated() && isValidProtocol(request.resource.data);
-      allow delete: if isAdmin();
+      allow delete: if isAuthenticated();
 
       match /history/{historyId} {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated() && isValidHistory(request.resource.data) && request.resource.data.performedBy == request.auth.uid;
+        allow delete: if isAuthenticated();
       }
     }
 
     match /{path=**}/items/{itemId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && isValidProtocolItem(request.resource.data);
+      allow delete: if isAuthenticated();
     }
 
     match /companies/{companyId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && isValidCompany(request.resource.data);
+      allow delete: if isAuthenticated();
     }
 
     match /employees/{employeeId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && isValidEmployee(request.resource.data);
+      allow delete: if isAuthenticated();
     }
 
     match /departments/{departmentId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && isValidDepartment(request.resource.data);
+      allow delete: if isAuthenticated();
     }
 
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated() && isValidNotification(request.resource.data);
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
     match /classifications/{classificationId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && isValidClassification(request.resource.data);
+      allow delete: if isAuthenticated();
     }
 
     match /documentTypes/{docTypeId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && isValidDocumentType(request.resource.data);
+      allow delete: if isAuthenticated();
     }
   }
 }
