@@ -62,6 +62,8 @@ export const Auth: React.FC<AuthProps> = ({ onSuccess, initialMode = 'login' }) 
         message = 'Este e-mail já está em uso.';
       } else if (err.code === 'auth/weak-password') {
         message = 'A senha deve ter pelo menos 6 caracteres.';
+      } else if (err.code === 'auth/operation-not-allowed') {
+        message = 'O login por e-mail/senha não está ativado no Console do Firebase. Por favor, ative-o em Authentication > Sign-in method.';
       } else if (err.message) {
         message = err.message;
       }
